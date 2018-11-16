@@ -62,7 +62,7 @@ int main() {
             milliseconds = 1000*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000);
      if(shmPTR->Release == -2){ //&&(milliseconds >= boundmil)) {
                 sem = sem_open("sem1115", 0); sem_wait(sem);
-                srand(getrand++); value = 1 + (rand()%32000);   //fprintf(stderr, "Value is %d\n",value);
+                srand(getrand++); value = 1001 + (rand()%32000);   //fprintf(stderr, "Value is %d\n",value);
                  shmPTR->Requests[1] = value; 
                  shmPTR->Release = 0; 
                Requests++;                                                                                                                                                              
