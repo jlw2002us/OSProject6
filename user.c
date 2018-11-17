@@ -57,16 +57,16 @@ int main() {
       boundmil =  100*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000) + value;
      processID = shmPTR->processID;
       
-     termValue = 1000 + value; 
+     termValue =  400 + value; 
      while(true){  
             milliseconds = 1000*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000);
      if((shmPTR->Release == -2)&&(milliseconds >= boundmil)) {
                 sem = sem_open("sem1122", 0); sem_wait(sem);
-                srand(getrand++); value = 1001 + (rand()%15000);   //fprintf(stderr, "Value is %d\n",value);
+                srand(getrand++); value = 1001 + (rand()%32000);   //fprintf(stderr, "Value is %d\n",value);
                  shmPTR->Requests[1] = value; 
                  shmPTR->Release = 0; 
                Requests++;                                                                                                                                                              
-               boundmil =   700*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000) + value;
+               boundmil =   995*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000) + value;
                shmPTR->RequestID = processID; sem_post(sem); sem_close(sem);
             
        if(Requests > termValue)  break;} //if it's rolled the chance to terminate

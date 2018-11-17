@@ -41,8 +41,8 @@ struct FramesTable{
      };
 struct PageTable{
      int pageIndex;
-     int address[23];
-     int frameNo[23];
+     int address[35];
+     int frameNo[35];
      };
 struct Memory  *shmPTR;
 bool signal_interrupt = false;
@@ -59,7 +59,7 @@ void  ALARMhandler(int sig)
 
  int main(int argc, char* argv[])
   {
-     struct FramesTable framestables[55];
+     struct FramesTable framestables[260];
      
      struct PageTable pagetable[40];
      int noProcesses = 0;     
@@ -83,13 +83,13 @@ void  ALARMhandler(int sig)
      bool pageFound = false;
 
 
-     for(i = 0; i < 50; i++){
+     for(i = 0; i < 256; i++){
         framestables[i].useBit = 0;
         framestables[i].address = 0;
         framestables[i].DirtyBit = 0;}
 
      for(i = 0; i < 40; i++){
-        for(j = 0; j < 20; j++){
+        for(j = 0; j < 35; j++){
             pagetable[i].address[j] = 0;
             pagetable[i].frameNo[j] = -1;
             }
@@ -127,7 +127,7 @@ void  ALARMhandler(int sig)
       while(1){if(signal_interrupt == true) break;
           
           //if(noProcesses > 18) break;
-          if((milliseconds >= boundmill)&&(childCount < 12)){
+          if((milliseconds >= boundmill)&&(childCount < 18)){
             childCount++;  noProcesses++; srand(getrand++);
             
             srand(getrand++); //fprintf(stderr, "child count is %d\n", shmPTR->processID);
@@ -162,24 +162,24 @@ void  ALARMhandler(int sig)
                  
                     for(i = 1; i < 25; i++){ //check page tables for request
                       if(i == shmPTR->RequestID){
-                        for(j = 0; j < 15; j++){
+                        for(j = 0; j < 32; j++){
                           if((pagetable[i].address[j] == shmPTR->Requests[1]/1000)&&(pagetable[i].frameNo[j] != -2)){
                                if(pagetable[i].frameNo[j] != -1){ 
                                  found = 1;  fprintf(stderr,"Process %d is granted page %d at frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].address[j]); 
                                  framestables[pagetable[i].frameNo[j]].useBit = 1; 
                                  nanoseconds = 0;
-                               while(nanoseconds <  10){
-                                nanoseconds = nanoseconds + 1;
+                               
+                                nanoseconds = nanoseconds + 10;
 
-                                }
+                                
                                 break;}}}}
                         if (found == 1) break;}
-                    for(i = 0; i < 50; i++){  //put in memory frames if there's room
+                    for(i = 0; i < 255; i++){  //put in memory frames if there's room
                       if((framestables[i].address == 0)&&(found == 0)){
                         while(nanoseconds < 15000000){ //add 15 milliseconds
-                          nanoseconds = nanoseconds + 500;}       
+                          nanoseconds = nanoseconds + 150000;}       
                         framestables[i].address = shmPTR->Requests[1]/1000;
-                        for(j =0; j < 15; j++){
+                        for(j =0; j < 32; j++){
                              if((pagetable[shmPTR->RequestID].frameNo[j] == -2) &&(shmPTR->Requests[1]/1000 == pagetable[shmPTR->RequestID].address[j]))
                                { pagetable[shmPTR->RequestID].frameNo[j] = i; pageFound = true;}}
                         if(pageFound == false){
@@ -188,22 +188,22 @@ void  ALARMhandler(int sig)
                            pagetable[shmPTR->RequestID].pageIndex++;}
                         fprintf(stderr,"Page fault: Process %d page %d is added at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
                         framestables[i].useBit = 1;
-                        RefPointer++; if(RefPointer == 50) RefPointer = 0;full = false; break;}}
+                        RefPointer++; if(RefPointer == 255) RefPointer = 0;full = false; break;}}
 
                     //swap out a process
                     if((full == true)&&(found == 0)){
                        
                        while(true){
-                          if(RefPointer == 50) RefPointer = 0;
+                          if(RefPointer == 255) RefPointer = 0;
                           if(framestables[RefPointer].useBit == 0){
                             while(nanoseconds < 15000000){
-                               nanoseconds = nanoseconds + 500;}
+                               nanoseconds = nanoseconds + 150000;}
                             for(i = 1; i < 25; i++){
-                              for(j = 0; j < 15; j++){
+                              for(j = 0; j < 32; j++){
                                 if(RefPointer == pagetable[i].frameNo[j]){
                                   pagetable[i].frameNo[j] = -2;}//fprintf(stderr,"%s", "page entry changed");}
                              }}
-                             for(j =0; j < 15; j++){
+                             for(j =0; j < 32; j++){
                              if((pagetable[shmPTR->RequestID].frameNo[j] == -2) &&(shmPTR->Requests[1]/1000 == pagetable[shmPTR->RequestID].address[j]))
                                { pagetable[shmPTR->RequestID].frameNo[j] = RefPointer; pageFound = true;}}
                              if(pageFound == false){
@@ -237,8 +237,8 @@ void  ALARMhandler(int sig)
        sleep(1);
       }while (true);
        for(j = 1; j < 25; j++){
-        for(i = 0; i < 15; i++){
-          fprintf(stderr,"Process %d page frame is %d and page address is %d\n", j,pagetable[j].frameNo[i], pagetable[j].address[i]);}}
+         for(i = 0; i < 32; i++){
+           fprintf(stderr,"Process %d page frame is %d and page address is %d\n", j,pagetable[j].frameNo[i], pagetable[j].address[i]);}}
       shmdt((void *) shmPTR);
        sem_close(sem);
       
