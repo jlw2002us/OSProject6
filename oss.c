@@ -165,7 +165,12 @@ void  ALARMhandler(int sig)
                         for(j = 0; j < 32; j++){
                           if((pagetable[i].address[j] == shmPTR->Requests[1]/1000)&&(pagetable[i].frameNo[j] != -2)){
                                if(pagetable[i].frameNo[j] != -1){ 
-                                 found = 1;  fprintf(stderr,"Process %d is granted page %d at frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].address[j]); 
+                                 found = 1;
+                                 if(shmPTR->Requests[2] == 1)  
+                                   fprintf(stderr,"Process %d is granted to read data at page %d frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].address[j]);
+                                 else
+                                   fprintf(stderr,"Process %d is granted to write data at page %d frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].address[j]);
+ 
                                  framestables[pagetable[i].frameNo[j]].useBit = 1; 
                                  nanoseconds = 0;
                                
@@ -186,7 +191,9 @@ void  ALARMhandler(int sig)
                            pagetable[shmPTR->RequestID].address[pagetable[shmPTR->RequestID].pageIndex] = shmPTR->Requests[1]/1000;
                            pagetable[shmPTR->RequestID].frameNo[pagetable[shmPTR->RequestID].pageIndex] = i;
                            pagetable[shmPTR->RequestID].pageIndex++;}
-                        fprintf(stderr,"Page fault: Process %d page %d is added at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
+                        if(shmPTR->Requests[2] == 1)
+                          fprintf(stderr,"Page fault: Process %d page %d is reading data at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
+                        else   fprintf(stderr,"Page fault: Process %d page %d is writing data at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
                         framestables[i].useBit = 1;
                         RefPointer++; if(RefPointer == 255) RefPointer = 0;full = false; break;}}
 
@@ -212,7 +219,11 @@ void  ALARMhandler(int sig)
                                 pagetable[shmPTR->RequestID].pageIndex++;}
 
                              framestables[RefPointer].address = shmPTR->Requests[1]/1000;
-                            fprintf(stderr,"Process %d page %d is swapped in at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
+                            if(shmPTR->Requests[2] == 1)
+                              fprintf(stderr,"Process %d page %d is swapped in to read data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
+                            else
+                               fprintf(stderr,"Process %d page %d is swapped in to write data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
+
                              framestables[RefPointer].useBit = 1;  
                             
                                   
