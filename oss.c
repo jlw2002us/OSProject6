@@ -60,7 +60,7 @@ void  ALARMhandler(int sig)
  int main(int argc, char* argv[])
   {
      struct FramesTable framestables[12];
-     int framesno = 0;
+     
      struct PageTable pagetable[12];
      int noProcesses = 0;     
      FILE *fp;
@@ -73,13 +73,15 @@ void  ALARMhandler(int sig)
      long int getrand = getpid();
      signal(SIGALRM, ALARMhandler);
      int x;
-     int RefPointer = 1;
+     int RefPointer = 0;
      int ShmID;
      int boundmill = 0;
      int i,j;
      int found = 0;
+     long long int nanoseconds = 0;
+     bool full = true;
 
-     for(i = 0; i < 11; i++){
+     for(i = 0; i < 12; i++){
         for(j = 0; j < 11; j++){
             pagetable[i].address[j] = 0;
             pagetable[i].frameNo[j] = 0;}
@@ -150,30 +152,56 @@ void  ALARMhandler(int sig)
                sem = sem_open("sem1115", 0); sem_wait(sem); 
                if(shmPTR->Release == 0){
                  //fprintf(stderr,"Process %d requests %d at time %d"":""%lld \n", shmPTR->RequestID,shmPTR->Requests[1],shmPTR->seconds, shmPTR->nanoseconds);
-                 if(framesno <= 11){
-                 for(i = 1; i  < 11; i++){
-                    if(i == shmPTR->RequestID){
-                      for(j = 0; j < 12; j++){
-                       if(pagetable[i].address[j] == shmPTR->Requests[1]/1000){ 
-                           found = 1; framestables[pagetable[i].frameNo[j]].useBit = 1; break;}}}
-                      if (found == 1) break;}
-                       
-                   if((framestables[framesno].address == 0)&&(found == 0)){ 
-                       framestables[framesno].address = shmPTR->Requests[1]/1000;
-                       pagetable[shmPTR->RequestID].address[pagetable[shmPTR->RequestID].pageIndex] = shmPTR->Requests[1]/1000;
-                       pagetable[shmPTR->RequestID].frameNo[pagetable[shmPTR->RequestID].pageIndex] = framesno;
-                       pagetable[shmPTR->RequestID].pageIndex++;
-                       fprintf(stderr,"Frames address is %d\n", framestables[framesno].address);
-                       framestables[framesno].useBit = 1;
-                       framesno++; RefPointer++;}}}
-             
-            shmPTR->Release = -2; found = 0;  sem_post(sem); sem_close(sem);}
-                       
-            long long int nanoseconds = 0;
-           while(nanoseconds <  10){
-            nanoseconds = nanoseconds + 1;
+                 
+                    for(i = 1; i < 13; i++){
+                      if(i == shmPTR->RequestID){
+                        for(j = 0; j < 10; j++){
+                          if(pagetable[i].address[j] == shmPTR->Requests[1]/1000){ 
+                             found = 1; //fprintf(stderr,"frame no is %d\n",pagetable[i].frameNo[j]);
+                             framestables[pagetable[i].frameNo[j]].useBit = 1; 
+                              nanoseconds = 0;
+                               while(nanoseconds <  10){
+                                nanoseconds = nanoseconds + 1;
 
-           }
+                                }
+                                break;}}}
+                        if (found == 1) break;}
+                    for(i = 0; i < 4; i++){
+                      if((framestables[i].address == 0)&&(found == 0)){
+                        while(nanoseconds < 15000000){
+                          nanoseconds = nanoseconds + 500;}       
+                        framestables[i].address = shmPTR->Requests[1]/1000;
+                        pagetable[shmPTR->RequestID].address[pagetable[shmPTR->RequestID].pageIndex] = shmPTR->Requests[1]/1000;
+                        pagetable[shmPTR->RequestID].frameNo[pagetable[shmPTR->RequestID].pageIndex] = i;
+                        pagetable[shmPTR->RequestID].pageIndex++;
+                        fprintf(stderr,"Frames address is %d\n", framestables[i].address);
+                        framestables[i].useBit = 1;
+                        RefPointer++; if(RefPointer == 4) RefPointer = 0;full = false; break;}}
+
+                    //swap out a process
+                    if((full == true)&&(found == 0)){
+                       
+                       while(true){
+                          if(RefPointer == 4) RefPointer = 0;
+                          if(framestables[RefPointer].useBit == 0){
+                            while(nanoseconds < 15000000){
+                               nanoseconds = nanoseconds + 500;}
+                             if(pagetable[shmPTR->RequestID].pageIndex < 10){ //fprintf(stderr,"%s","Added to page table");
+                                pagetable[shmPTR->RequestID].address[pagetable[shmPTR->RequestID].pageIndex] = shmPTR->Requests[1]/1000;
+                                pagetable[shmPTR->RequestID].frameNo[pagetable[shmPTR->RequestID].pageIndex] = i;
+                                pagetable[shmPTR->RequestID].pageIndex++;}
+                             framestables[RefPointer].address = shmPTR->Requests[1]/1000;
+                        //    fprintf(stderr,"Process %d is swapped in at frame %d\n", shmPTR->RequestID,RefPointer);
+                            framestables[RefPointer].useBit = 1; RefPointer++; break;}
+                          else{
+                            framestables[RefPointer].useBit = 0;
+                            RefPointer++;}
+                        }}
+                    
+            shmPTR->Release = -2; found = 0;  full = true; sem_post(sem); sem_close(sem);}}
+                       
+            
+           
             shmPTR->nanoseconds = shmPTR->nanoseconds + nanoseconds;
            while(shmPTR->nanoseconds >= 1000000000){
               shmPTR->seconds++;
@@ -184,7 +212,7 @@ void  ALARMhandler(int sig)
        sleep(1);
       }while (true);
        
-       
+      
       shmdt((void *) shmPTR);
        sem_close(sem);
       
