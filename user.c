@@ -57,12 +57,12 @@ int main() {
       boundmil =  1000*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000) + value;
      processID = shmPTR->processID;
       
-     termValue = 7 + value; 
+     termValue = 1000 + value; 
      while(true){  
             milliseconds = 1000*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000);
      if(shmPTR->Release == -2){ //&&(milliseconds >= boundmil)) {
-                sem = sem_open("sem1115", 0); sem_wait(sem);
-                srand(getrand++); value = 1001 + (rand()%32000);   //fprintf(stderr, "Value is %d\n",value);
+                sem = sem_open("sem1120", 0); sem_wait(sem);
+                srand(getrand++); value = 1001 + (rand()%10000);   //fprintf(stderr, "Value is %d\n",value);
                  shmPTR->Requests[1] = value; 
                  shmPTR->Release = 0; 
                Requests++;                                                                                                                                                              
@@ -72,7 +72,7 @@ int main() {
        if(Requests > termValue)  break;} //if it's rolled the chance to terminate
          }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-      sem = sem_open("sem1115", 0); sem_wait(sem);
+      sem = sem_open("sem1120", 0); sem_wait(sem);
       //fprintf(stderr,"%s", "child terminated");
       shmPTR->TerminatedProc[shmPTR->termNum] = processID;
       shmPTR->termNum++; sem_post(sem); sem_close(sem);
