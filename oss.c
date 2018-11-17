@@ -78,6 +78,7 @@ void  ALARMhandler(int sig)
      int boundmill = 0;
      int i,j;
      int found = 0;
+     int printCount = 0;
      long long int nanoseconds = 0;
      bool full = true; //memory frames table full or not
      bool pageFound = false;
@@ -149,7 +150,7 @@ void  ALARMhandler(int sig)
            milliseconds = (1000*shmPTR->seconds) + (int)(shmPTR->nanoseconds/1000000);
           for(y = 0; y < shmPTR->termNum; y++){sem = sem_open("sem1122", 0); sem_wait(sem);
            //see if children have exited
-              fprintf(stderr, "Process %d is exiting at time %d"":""%lld\n", shmPTR->TerminatedProc[y],shmPTR->seconds, shmPTR->nanoseconds);
+              fprintf(fp, "Process %d is exiting at time %d"":""%lld\n", shmPTR->TerminatedProc[y],shmPTR->seconds, shmPTR->nanoseconds);
                shmPTR->Release = -2; shmPTR->TerminatedProc[y] = -2;
                shmPTR->termNum = 0;sem_post(sem); sem_close(sem); childCount--;}
 
@@ -157,8 +158,8 @@ void  ALARMhandler(int sig)
           if(shmPTR->Release != -2){  //if a child is in the critical region
                sem = sem_open("sem1122", 0); sem_wait(sem); 
                if(shmPTR->Release == 0){
-                 
-                 fprintf(stderr,"Process %d requests %d at time %d"":""%lld \n", shmPTR->RequestID,shmPTR->Requests[1],shmPTR->seconds, shmPTR->nanoseconds);
+                 printCount++;
+                 fprintf(fp,"Process %d requests %d at time %d"":""%lld \n", shmPTR->RequestID,shmPTR->Requests[1],shmPTR->seconds, shmPTR->nanoseconds);
                  
                     for(i = 1; i < 25; i++){ //check page tables for request
                       if(i == shmPTR->RequestID){
@@ -167,9 +168,9 @@ void  ALARMhandler(int sig)
                                if(pagetable[i].frameNo[j] != -1){ 
                                  found = 1;
                                  if(shmPTR->Requests[2] == 1)  
-                                   fprintf(stderr,"Process %d is granted to read data at page %d frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].address[j]);
-                                 else
-                                   fprintf(stderr,"Process %d is granted to write data at page %d frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].address[j]);
+                                   fprintf(fp,"Process %d is granted to read data at page %d frame %d\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].frameNo[j]);
+                                 else{ nanoseconds = nanoseconds*2; framestables[pagetable[i].frameNo[j]].DirtyBit = 1;
+                                   fprintf(fp,"Process %d is granted to write data at page %d frame %d extra time added\n",shmPTR->RequestID, shmPTR->Requests[1]/1000,pagetable[i].frameNo[j]);}
  
                                  framestables[pagetable[i].frameNo[j]].useBit = 1; 
                                  nanoseconds = 0;
@@ -179,7 +180,7 @@ void  ALARMhandler(int sig)
                                 
                                 break;}}}}
                         if (found == 1) break;}
-                    for(i = 0; i < 255; i++){  //put in memory frames if there's room
+                    for(i = 0; i < 256; i++){  //put in memory frames if there's room
                       if((framestables[i].address == 0)&&(found == 0)){
                         while(nanoseconds < 15000000){ //add 15 milliseconds
                           nanoseconds = nanoseconds + 150000;}       
@@ -192,16 +193,18 @@ void  ALARMhandler(int sig)
                            pagetable[shmPTR->RequestID].frameNo[pagetable[shmPTR->RequestID].pageIndex] = i;
                            pagetable[shmPTR->RequestID].pageIndex++;}
                         if(shmPTR->Requests[2] == 1)
-                          fprintf(stderr,"Page fault: Process %d page %d is reading data at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
-                        else   fprintf(stderr,"Page fault: Process %d page %d is writing data at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
+                          fprintf(fp,"Page fault: Process %d page %d is reading data at frame %d\n", shmPTR->RequestID, framestables[i].address,i);
+                        else{
+                          fprintf(fp,"Page fault: Process %d page %d is writing data at frame %d, extra time added.\n", shmPTR->RequestID, framestables[i].address,i);
+                          nanoseconds = nanoseconds*2; framestables[RefPointer].DirtyBit = 1;}
                         framestables[i].useBit = 1;
-                        RefPointer++; if(RefPointer == 255) RefPointer = 0;full = false; break;}}
+                        RefPointer++; if(RefPointer == 256) RefPointer = 0;full = false; break;}}
 
                     //swap out a process
                     if((full == true)&&(found == 0)){
                        
                        while(true){
-                          if(RefPointer == 255) RefPointer = 0;
+                          if(RefPointer == 256) RefPointer = 0;
                           if(framestables[RefPointer].useBit == 0){
                             while(nanoseconds < 15000000){
                                nanoseconds = nanoseconds + 150000;}
@@ -220,10 +223,10 @@ void  ALARMhandler(int sig)
 
                              framestables[RefPointer].address = shmPTR->Requests[1]/1000;
                             if(shmPTR->Requests[2] == 1)
-                              fprintf(stderr,"Process %d page %d is swapped in to read data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
-                            else
-                               fprintf(stderr,"Process %d page %d is swapped in to write data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
-
+                              fprintf(fp,"Process %d page %d is swapped in to read data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
+                            else{
+                               fprintf(fp,"Process %d page %d is swapped in to write data at frame %d extra time added\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
+                               nanoseconds = nanoseconds*2; framestables[RefPointer].DirtyBit = 1;}
                              framestables[RefPointer].useBit = 1;  
                             
                                   
@@ -236,7 +239,9 @@ void  ALARMhandler(int sig)
                     
             shmPTR->Release = -2; found = 0;  full = true; pageFound = false; sem_post(sem); sem_close(sem);}}
                        
-            
+            //if(printCount%50 == 0){
+              //for(i = 0; i < 256; i++){
+               
            
             shmPTR->nanoseconds = shmPTR->nanoseconds + nanoseconds;
            while(shmPTR->nanoseconds >= 1000000000){
@@ -247,9 +252,9 @@ void  ALARMhandler(int sig)
        printf("Clock ticking..\n");
        sleep(1);
       }while (true);
-       for(j = 1; j < 25; j++){
-         for(i = 0; i < 32; i++){
-           fprintf(stderr,"Process %d page frame is %d and page address is %d\n", j,pagetable[j].frameNo[i], pagetable[j].address[i]);}}
+       //for(j = 1; j < 25; j++){
+         //for(i = 0; i < 32; i++){
+           //fprintf(stderr,"Process %d page frame is %d and page address is %d\n", j,pagetable[j].frameNo[i], pagetable[j].address[i]);}}
       shmdt((void *) shmPTR);
        sem_close(sem);
       
