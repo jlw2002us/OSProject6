@@ -41,8 +41,8 @@ struct FramesTable{
      };
 struct PageTable{
      int pageIndex;
-     int address[15];
-     int frameNo[15];
+     int address[20];
+     int frameNo[20];
      };
 struct Memory  *shmPTR;
 bool signal_interrupt = false;
@@ -59,7 +59,7 @@ void  ALARMhandler(int sig)
 
  int main(int argc, char* argv[])
   {
-     struct FramesTable framestables[12];
+     struct FramesTable framestables[20];
      
      struct PageTable pagetable[20];
      int noProcesses = 0;     
@@ -72,7 +72,7 @@ void  ALARMhandler(int sig)
      pid_t childID;
      long int getrand = getpid();
      signal(SIGALRM, ALARMhandler);
-     int x;
+     //int x;
      int RefPointer = 0;
      int ShmID;
      int boundmill = 0;
@@ -109,7 +109,7 @@ void  ALARMhandler(int sig)
     shmPTR->seconds = 1;
     shmPTR->nanoseconds = 0;
     shmPTR->processID = 0;
-     sem = sem_open ("sem1120", O_CREAT | O_EXCL, 0644, 1);
+     sem = sem_open ("sem1121", O_CREAT | O_EXCL, 0644, 1);
       sem_close(sem);
        
        fp= fopen("logfile.txt", "a");
@@ -122,7 +122,7 @@ void  ALARMhandler(int sig)
       while(1){if(signal_interrupt == true) break;
           
           //if(noProcesses > 18) break;
-          if((milliseconds >= boundmill)&&(noProcesses < 1)){
+          if((milliseconds >= boundmill)&&(noProcesses < 2)){
             childCount++;  noProcesses++; srand(getrand++);
             
             srand(getrand++); //fprintf(stderr, "child count is %d\n", shmPTR->processID);
@@ -142,7 +142,7 @@ void  ALARMhandler(int sig)
              
            
            milliseconds = (1000*shmPTR->seconds) + (int)(shmPTR->nanoseconds/1000000);
-          for(y = 0; y < shmPTR->termNum; y++){sem = sem_open("sem1120", 0); sem_wait(sem);
+          for(y = 0; y < shmPTR->termNum; y++){sem = sem_open("sem1121", 0); sem_wait(sem);
            //see if children have exited
               fprintf(stderr, "Process %d is exiting at time %d"":""%lld\n", shmPTR->TerminatedProc[y],shmPTR->seconds, shmPTR->nanoseconds);
                shmPTR->Release = -2; shmPTR->TerminatedProc[y] = -2;
@@ -150,10 +150,10 @@ void  ALARMhandler(int sig)
 
           //fprintf(stderr, "release is %d\n", shmPTR->Release);
           if(shmPTR->Release != -2){  //if a child is in the critical region
-               sem = sem_open("sem1120", 0); sem_wait(sem); 
+               sem = sem_open("sem1121", 0); sem_wait(sem); 
                if(shmPTR->Release == 0){
                  
-                 //fprintf(stderr,"Process %d requests %d at time %d"":""%lld \n", shmPTR->RequestID,shmPTR->Requests[1],shmPTR->seconds, shmPTR->nanoseconds);
+                 fprintf(stderr,"Process %d requests %d at time %d"":""%lld \n", shmPTR->RequestID,shmPTR->Requests[1],shmPTR->seconds, shmPTR->nanoseconds);
                  
                     for(i = 1; i < 13; i++){ //check page tables for request
                       if(i == shmPTR->RequestID){
@@ -168,24 +168,27 @@ void  ALARMhandler(int sig)
                                 }
                                 break;}}}
                         if (found == 1) break;}
-                    for(i = 0; i < 10; i++){  //put in memory frames if there's room
+                    for(i = 0; i < 15; i++){  //put in memory frames if there's room
                       if((framestables[i].address == 0)&&(found == 0)){
                         while(nanoseconds < 15000000){
                           nanoseconds = nanoseconds + 500;}       
                         framestables[i].address = shmPTR->Requests[1]/1000;
-                        
+                        for(j =0; j < 10; j++){
+                             if((pagetable[shmPTR->RequestID].frameNo[j] == -2) &&(shmPTR->Requests[1]/1000 == pagetable[shmPTR->RequestID].address[j]))
+                               { pagetable[shmPTR->RequestID].frameNo[j] = i; pageFound = true;}}
+                        if(pageFound == false){
                            pagetable[shmPTR->RequestID].address[pagetable[shmPTR->RequestID].pageIndex] = shmPTR->Requests[1]/1000;
                            pagetable[shmPTR->RequestID].frameNo[pagetable[shmPTR->RequestID].pageIndex] = i;
-                           pagetable[shmPTR->RequestID].pageIndex++;
+                           pagetable[shmPTR->RequestID].pageIndex++;}
                         //fprintf(stderr,"Frames address is %d\n", framestables[i].address);
                         framestables[i].useBit = 1;
-                        RefPointer++; if(RefPointer == 10) RefPointer = 0;full = false; break;}}
+                        RefPointer++; if(RefPointer == 15) RefPointer = 0;full = false; break;}}
 
                     //swap out a process
                     if((full == true)&&(found == 0)){
                        
                        while(true){
-                          if(RefPointer == 10) RefPointer = 0;
+                          if(RefPointer == 15) RefPointer = 0;
                           if(framestables[RefPointer].useBit == 0){
                             while(nanoseconds < 15000000){
                                nanoseconds = nanoseconds + 500;}
@@ -203,7 +206,7 @@ void  ALARMhandler(int sig)
                                 pagetable[shmPTR->RequestID].pageIndex++;}
 
                              framestables[RefPointer].address = shmPTR->Requests[1]/1000;
-                            //fprintf(stderr,"Process %d is swapped in at frame %d\n", shmPTR->RequestID,RefPointer);
+                            fprintf(stderr,"Process %d page %d is swapped in at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
                              framestables[RefPointer].useBit = 1;  
                             
                                   
@@ -227,13 +230,13 @@ void  ALARMhandler(int sig)
        printf("Clock ticking..\n");
        sleep(1);
       }while (true);
-       
-      for(i = 0; i < 10; i++){
-        fprintf(stderr,"Page frame is %d and page address is %d\n", pagetable[1].frameNo[i], pagetable[1].address[i]);}
+       for(j = 1; j < 3; j++){
+        for(i = 0; i < 10; i++){
+          fprintf(stderr,"Page frame is %d and page address is %d\n", pagetable[j].frameNo[i], pagetable[j].address[i]);}}
       shmdt((void *) shmPTR);
        sem_close(sem);
       
-       sem_unlink("sem1120");
+       sem_unlink("sem1121");
          
        fclose(fp);
        shmctl(ShmID, IPC_RMID, NULL);
