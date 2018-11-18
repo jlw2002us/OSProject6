@@ -53,11 +53,11 @@ int main() {
      shmPTR->processID++;
      //fprintf(stderr, "Release Value is %d\n", shmPTR->Release);
      srand(getrand++);
-     value = 1 + (rand()%100); 
+     value = 1 + (rand()%10); 
       boundmil =  100*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000) + value;
      processID = shmPTR->processID;
       
-     termValue =  300 + value; 
+     termValue =  125 + value; 
      while(true){  
             milliseconds = 1000*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000);
      if((shmPTR->Release == -2)&&(milliseconds >= boundmil)) {
@@ -75,7 +75,6 @@ int main() {
             
        if(Requests > termValue)  break;} //if it's rolled the chance to terminate
          }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
       sem = sem_open("sem1122", 0); sem_wait(sem);
       //fprintf(stderr,"%s", "child terminated");
       shmPTR->TerminatedProc[shmPTR->termNum] = processID;

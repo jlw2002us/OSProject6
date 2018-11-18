@@ -223,9 +223,9 @@ void  ALARMhandler(int sig)
 
                              framestables[RefPointer].address = shmPTR->Requests[1]/1000;
                             if(shmPTR->Requests[2] == 1){framestables[RefPointer].DirtyBit = 0;
-                              fprintf(fp,"Process %d page %d is swapped in to read data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);}
+                              fprintf(fp,"Page fault: process %d page %d is swapped in to read data at frame %d\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);}
                             else{
-                               fprintf(fp,"Process %d page %d is swapped in to write data at frame %d extra time added\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
+                               fprintf(fp,"Page fault: process %d page %d is swapped in to write data at frame %d extra time added\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
                                nanoseconds = nanoseconds*2; framestables[RefPointer].DirtyBit = 1;}
                              framestables[RefPointer].useBit = 1;  
                             
