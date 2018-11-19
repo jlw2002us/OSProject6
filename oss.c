@@ -73,6 +73,7 @@ void  ALARMhandler(int sig)
       int milliseconds = 0;
      int childCount = 0;
      int value = 0;
+     float speedSum = 0.0;
      pid_t childID;
      long int getrand = getpid();
      signal(SIGALRM, ALARMhandler);
@@ -269,23 +270,21 @@ void  ALARMhandler(int sig)
        printf("Clock ticking..\n");
        sleep(1);
       }while (true);
-      fprintf(stderr,"%s","Process No \t");
-      fprintf(stderr,"%s","Accesses per second\t");
-      fprintf(stderr,"%s","Page faults per access\n");
+      fprintf(fp,"%s","\nProcess No \t");
+      fprintf(fp,"%s","Accesses per second\t");
+      fprintf(fp,"%s","Page faults per access\n");
      
-
-
-
-
 
       for(i = 0; i < processNo; i++){
           if(stats[i].endTime == 0)
             stats[i].endTime = shmPTR->seconds;
           if(stats[i].memoryAccesses != 0){
-            //fprintf(stderr, "Memory accesses is %d", stats[i].memoryAccesses);
-            fprintf(stderr,"     %d\t\t",i);
-            fprintf(stderr, "%f\t\t", (float)stats[i].memoryAccesses/(float)(stats[i].endTime - stats[i].startTime));
-            fprintf(stderr, "%f\n",(float)stats[i].noFaults/stats[i].memoryAccesses);}}
+            fprintf(fp, "Memory accesses is %d", stats[i].memoryAccesses);
+            fprintf(fp,"     %d\t\t",i);
+            speedSum = speedSum + (float)stats[i].memoryAccesses/((float)(stats[i].endTime - stats[i].startTime));
+            fprintf(fp, "%f\t\t", (float)stats[i].memoryAccesses/(float)(stats[i].endTime - stats[i].startTime));
+            fprintf(fp, "%f\n",(float)stats[i].noFaults/stats[i].memoryAccesses);}}
+       fprintf(fp,"Average memory access speed is %f", speedSum/(processNo - 1));
        shmdt((void *) shmPTR);
        sem_close(sem);
 

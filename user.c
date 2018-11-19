@@ -60,7 +60,7 @@ int main() {
       boundmil =  100*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000) + value;
      processID = shmPTR->processID;
      
-     termValue =  125 + value;
+     termValue =  1000 + value;
      while(true){
             milliseconds = 1000*shmPTR->seconds + (int)(shmPTR->nanoseconds/1000000);
      if((shmPTR->Release == -2)&&(milliseconds >= boundmil)) {
