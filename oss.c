@@ -1,9 +1,3 @@
- //Jenifer Wasson
- //Operating Systems
- //Project 5
- 
- //Sources used:  rosettacode.org-banker's algorithm: modified for use in my program
- 
 #include <semaphore.h>
   #include <string.h>
   #include <ctype.h>
@@ -43,7 +37,16 @@ struct PageTable{
      int pageIndex;
      int address[35];
      int frameNo[35];
+       };
+ 
+struct Stats{
+     
+     int memoryAccesses;
+     int startTime;
+     int endTime;
+     int noFaults;
      };
+
 struct Memory  *shmPTR;
 bool signal_interrupt = false;
 
@@ -60,19 +63,19 @@ void  ALARMhandler(int sig)
  int main(int argc, char* argv[])
   {
      struct FramesTable framestables[260];
-     
+     struct Stats stats[40];
+     int index = 0;
      struct PageTable pagetable[40];
      int noProcesses = 0;     
      FILE *fp;
-     int y;     
+     int y;  int processNo = 0;   
      sem_t *sem;
-     int milliseconds = 0;
+      int milliseconds = 0;
      int childCount = 0;
      int value = 0;
      pid_t childID;
      long int getrand = getpid();
      signal(SIGALRM, ALARMhandler);
-     //int x;
      int RefPointer = 0;
      int ShmID;
      int boundmill = 0;
@@ -94,9 +97,13 @@ void  ALARMhandler(int sig)
             pagetable[i].address[j] = 0;
             pagetable[i].frameNo[j] = -1;
             }
-        pagetable[i].pageIndex = 0;
+         stats[i].startTime = 0;
+         stats[i].memoryAccesses = 0;
+         stats[i].noFaults = 0;
+         stats[i].endTime = 0;
+         pagetable[i].pageIndex = 0;
         }
-       
+
      key_t ShmKEY;
      alarm(2); //program can only run 2 seconds;
       ShmKEY = ftok(".", 'x');
@@ -112,56 +119,54 @@ void  ALARMhandler(int sig)
       exit(1);
     } 
     shmPTR->Release = -2;
-    shmPTR->seconds = 1;
+      shmPTR->seconds = 1;
     shmPTR->nanoseconds = 0;
     shmPTR->processID = 0;
-     sem = sem_open ("sem1122", O_CREAT | O_EXCL, 0644, 1);
+     sem = sem_open ("sem1130", O_CREAT | O_EXCL, 0644, 1);
       sem_close(sem);
-       
+
        fp= fopen("logfile.txt", "a");
        if (fp == NULL) {
         fprintf(stderr, "Can't open output file %s!\n",
           "logfile.txt");
         exit(1);
-       }               
-        
+       }
+
       while(1){if(signal_interrupt == true) break;
-          
-          //if(noProcesses > 18) break;
+
           if((milliseconds >= boundmill)&&(childCount < 18)){
             childCount++;  noProcesses++; srand(getrand++);
-            
+            processNo++;
             srand(getrand++); //fprintf(stderr, "child count is %d\n", shmPTR->processID);
             value = 1 + (rand()%500); //fork every 1 to 500 milliseconds
         boundmill = shmPTR->seconds*1000 + (int)(shmPTR->nanoseconds/1000000) + value;
-       
-            if ((childID = fork()) == 0) {
+            stats[processNo].startTime = shmPTR->seconds;
+            if ((childID = fork()) == 0) { //fprintf(stderr,"%s","hello from child");
                 char *args[]={"./user",NULL};
                 execvp(args[0],args);
-         
-        
+
+
         perror("child failed to execvp the command");
         return 1;}} 
-      
+
 
            else{ //add time and run second chance algorithm
-             
-           
+
+
            milliseconds = (1000*shmPTR->seconds) + (int)(shmPTR->nanoseconds/1000000);
-          for(y = 0; y < shmPTR->termNum; y++){sem = sem_open("sem1122", 0); sem_wait(sem);
-           //see if children have exited
-              fprintf(fp, "Process %d is exiting at time %d"":""%lld\n", shmPTR->TerminatedProc[y],shmPTR->seconds, shmPTR->nanoseconds);
+          for(y = 0; y < shmPTR->termNum; y++){sem = sem_open("sem1130", 0); sem_wait(sem);
+               index = shmPTR->TerminatedProc[y]; stats[index].endTime = shmPTR->seconds;
+               fprintf(fp, "Process %d is exiting at time %d"":""%lld\n", shmPTR->TerminatedProc[y],shmPTR->seconds, shmPTR->nanoseconds);
                shmPTR->Release = -2; shmPTR->TerminatedProc[y] = -2;
                shmPTR->termNum = 0;sem_post(sem); sem_close(sem); childCount--;}
 
-          //fprintf(stderr, "release is %d\n", shmPTR->Release);
-          if(shmPTR->Release != -2){  //if a child is in the critical region
-               sem = sem_open("sem1122", 0); sem_wait(sem); 
+           if(shmPTR->Release != -2){  //if a child is in the critical region
+               sem = sem_open("sem1130", 0); sem_wait(sem); 
                if(shmPTR->Release == 0){
-                 printCount++;
+                 printCount++; index = shmPTR->RequestID; stats[index].memoryAccesses++;
                  fprintf(fp,"Process %d requests %d at time %d"":""%lld \n", shmPTR->RequestID,shmPTR->Requests[1],shmPTR->seconds, shmPTR->nanoseconds);
-                 
-                    for(i = 1; i < 25; i++){ //check page tables for request
+
+                    for(i = 1; i < 40; i++){ //check page tables for request
                       if(i == shmPTR->RequestID){
                         for(j = 0; j < 32; j++){
                           if((pagetable[i].address[j] == shmPTR->Requests[1]/1000)&&(pagetable[i].frameNo[j] != -2)){
@@ -174,14 +179,15 @@ void  ALARMhandler(int sig)
  
                                  framestables[pagetable[i].frameNo[j]].useBit = 1; 
                                  nanoseconds = 0;
-                               
+
                                 nanoseconds = nanoseconds + 10;
 
-                                
+
                                 break;}}}}
                         if (found == 1) break;}
                     for(i = 0; i < 256; i++){  //put in memory frames if there's room
                       if((framestables[i].address == 0)&&(found == 0)){
+                       index = shmPTR->RequestID; stats[index].noFaults++;
                         while(nanoseconds < 15000000){ //add 15 milliseconds
                           nanoseconds = nanoseconds + 150000;}       
                         framestables[i].address = shmPTR->Requests[1]/1000;
@@ -199,16 +205,15 @@ void  ALARMhandler(int sig)
                           nanoseconds = nanoseconds*2; framestables[RefPointer].DirtyBit = 1;}
                         framestables[i].useBit = 1;
                         RefPointer++; if(RefPointer == 256) RefPointer = 0;full = false; break;}}
+                         if((full == true)&&(found == 0)){
 
-                    //swap out a process
-                    if((full == true)&&(found == 0)){
-                       
                        while(true){
                           if(RefPointer == 256) RefPointer = 0;
                           if(framestables[RefPointer].useBit == 0){
+                            index = shmPTR->RequestID; stats[index].noFaults++;
                             while(nanoseconds < 15000000){
                                nanoseconds = nanoseconds + 150000;}
-                            for(i = 1; i < 25; i++){
+                            for(i = 1; i < 40; i++){
                               for(j = 0; j < 32; j++){
                                 if(RefPointer == pagetable[i].frameNo[j]){
                                   pagetable[i].frameNo[j] = -2;}
@@ -227,18 +232,18 @@ void  ALARMhandler(int sig)
                             else{
                                fprintf(fp,"Page fault: process %d page %d is swapped in to write data at frame %d extra time added\n", shmPTR->RequestID,shmPTR->Requests[1]/1000,RefPointer);
                                nanoseconds = nanoseconds*2; framestables[RefPointer].DirtyBit = 1;}
-                             framestables[RefPointer].useBit = 1;  
-                            
-                                  
+                            framestables[RefPointer].useBit = 1;  
+
+
                              RefPointer++; break;}
-                          
+
                            else{
                             framestables[RefPointer].useBit = 0;
                             RefPointer++;}
                         }}
-                    
+
             shmPTR->Release = -2; found = 0;  full = true; pageFound = false; sem_post(sem); sem_close(sem);}}
-                       
+
             if((printCount%100 == 0)&&(printCount > 0)){
               for(i = 0; i < 256; i++){
                  if(i%10 == 0) fprintf(fp,"%s","\n");
@@ -255,8 +260,7 @@ void  ALARMhandler(int sig)
                  if(i%10 == 0) fprintf(fp,"%s","\n");
                  fprintf(fp,"%d ",framestables[i].useBit);}
            fprintf(fp,"%s","\n\n");}    
-           //fprintf(fp,"%s", "\n\n");
-            shmPTR->nanoseconds = shmPTR->nanoseconds + nanoseconds;
+           shmPTR->nanoseconds = shmPTR->nanoseconds + nanoseconds;
            while(shmPTR->nanoseconds >= 1000000000){
               shmPTR->seconds++;
               shmPTR->nanoseconds = shmPTR->nanoseconds - 1000000000;}}
@@ -265,21 +269,36 @@ void  ALARMhandler(int sig)
        printf("Clock ticking..\n");
        sleep(1);
       }while (true);
-       //for(j = 1; j < 25; j++){
-         //for(i = 0; i < 32; i++){
-           //fprintf(stderr,"Process %d page frame is %d and page address is %d\n", j,pagetable[j].frameNo[i], pagetable[j].address[i]);}}
-      shmdt((void *) shmPTR);
+      fprintf(stderr,"%s","Process No \t");
+      fprintf(stderr,"%s","Accesses per second\t");
+      fprintf(stderr,"%s","Page faults per access\n");
+     
+
+
+
+
+
+      for(i = 0; i < processNo; i++){
+          if(stats[i].endTime == 0)
+            stats[i].endTime = shmPTR->seconds;
+          if(stats[i].memoryAccesses != 0){
+            //fprintf(stderr, "Memory accesses is %d", stats[i].memoryAccesses);
+            fprintf(stderr,"     %d\t\t",i);
+            fprintf(stderr, "%f\t\t", (float)stats[i].memoryAccesses/(float)(stats[i].endTime - stats[i].startTime));
+            fprintf(stderr, "%f\n",(float)stats[i].noFaults/stats[i].memoryAccesses);}}
+       shmdt((void *) shmPTR);
        sem_close(sem);
-      
-       sem_unlink("sem1122");
-         
+
+       sem_unlink("sem1130");
+
        fclose(fp);
        shmctl(ShmID, IPC_RMID, NULL);
        killpg(getpgid(getpid()), SIGTERM);                //                         printf("Server has removed its shared memory...\n");
       //                                               printf("Server exits...\n");
-      //                                                    
-                                                               
-                                                                    exit(EXIT_SUCCESS);
-                                                                         
-                                                                           }
+      //                                                     //
       //
+                                                                                                                               exit(EXIT_SUCCESS);
+      
+                                                                                                                                                                                                          }
+      
+      //                                                                                                                                                                                                    
